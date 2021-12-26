@@ -35,6 +35,9 @@ public class InventoryService {
 
     public BookInventoryView convertBookInventoryToView(BookInventory bookInventory) {
         BookInventoryView view = new BookInventoryView();
+        if (bookInventory == null) {
+            return view;
+        }
         Integer allotted = 0, available = 0;
         if (bookInventory.getAllotted() != null) {
             allotted = bookInventory.getAllotted();
@@ -121,4 +124,31 @@ public class InventoryService {
         return convertBookInventoryToView(updatedInventory);
     }
 
+    public BookInventoryView returnBookFromReader(Long bookId, Long readerId) throws NotFoundException {
+        BookInventory bookInventory;
+        ReaderBookAllotment readerBookAllotment;
+        bookInventory = bookInventoryRepository.findByIdBook(bookId);
+        if (bookInventory == null ) {
+            throw new NotFoundException(String.format("No Book Found For Id %s", bookId));
+        }
+        Reader readerToAllot = readerRepository.findById(readerId)
+                .orElseThrow(() -> new NotFoundException(String.format("No Reader Found For Id %s", readerId)));
+        Integer available = bookInventory.getAvailable();
+        if (available > 0) {
+            bookInventory.setAvailable(available + 1);
+            bookInventory.setAllotted(bookInventory.getAllotted() - 1);
+        } else {
+            throw new RuntimeException(String.format("%s book not available to allot", bookInventory.getBook().getTitle()));
+        }
+        readerBookAllotment = readerBookAllotmentRepository.findByIdBookAndIdReader(bookId, readerId);
+        if (readerBookAllotment == null ) {
+            throw new RuntimeException(String.format("'%s' book is not allotted to %s",
+                    bookInventory.getBook().getTitle(), readerToAllot.getName()));
+        }
+        readerBookAllotment.setUpdatedDate(DateTimeUtility.getCurrentUTCDateTime());
+        readerBookAllotment.setAllotted(false);
+        BookInventory updatedInventory = bookInventoryRepository.save(bookInventory);
+        readerBookAllotmentRepository.save(readerBookAllotment);
+        return convertBookInventoryToView(updatedInventory);
+    }
 }

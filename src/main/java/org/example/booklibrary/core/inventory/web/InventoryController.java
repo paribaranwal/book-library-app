@@ -1,6 +1,7 @@
 package org.example.booklibrary.core.inventory.web;
 
 import javassist.NotFoundException;
+import org.example.booklibrary.core.inventory.BookReaderMappingActions;
 import org.example.booklibrary.core.inventory.InventoryService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,9 +27,16 @@ public class InventoryController {
         return service.updateBookInventory(id, req);
     }
 
-    @PutMapping("book/{id}/allot/{readerId}")
-    public BookInventoryView allotBookToReader(@PathVariable Long id, @PathVariable Long readerId) throws NotFoundException {
-        return service.allotBookToReader(id, readerId);
+    @PutMapping("book-reader-mapping/{bookId}/{readerId}")
+    public BookInventoryView updateBookReaderMapping(@PathVariable Long bookId,
+                                                     @PathVariable Long readerId,
+                                                     @RequestParam BookReaderMappingActions mappingAction) throws NotFoundException {
+        if (mappingAction == BookReaderMappingActions.Allot) {
+            return service.allotBookToReader(bookId, readerId);
+        } else if (mappingAction == BookReaderMappingActions.Return) {
+            return service.returnBookFromReader(bookId, readerId);
+        } else {
+            throw new NotFoundException(String.format("Invalid Action mapping %s between book and reader", mappingAction));
+        }
     }
-
 }
